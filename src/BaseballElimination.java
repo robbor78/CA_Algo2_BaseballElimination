@@ -121,7 +121,7 @@ public class BaseballElimination {
 
         int v = determineV(x);
 
-        FlowNetwork fn = buildFlowNetwork(v);
+        FlowNetwork fn = buildFlowNetwork(x, v);
         FordFulkerson ff = new FordFulkerson(fn, 0, v - 1);
 
         Iterable<FlowEdge> iter = fn.adj(0);
@@ -135,9 +135,36 @@ public class BaseballElimination {
 
     }
 
-    private FlowNetwork buildFlowNetwork(int v) {
-        // TODO Auto-generated method stub
-        return null;
+    private FlowNetwork buildFlowNetwork(int x, int v) {
+        FlowNetwork fn = new FlowNetwork(v);
+
+        int length = games.length;
+        int gamesToPlay = v - 2 - (length - 1);
+        int w = 1;
+        for (int i = 0; i < length; i++) {
+            if (i == x) {
+                continue;
+            }
+
+            for (int k = i; k < length; k++) {
+                if (k == x) {
+                    continue;
+                }
+
+                int capacity = games[i][k];
+                
+                FlowEdge edgeStart = new FlowEdge(0, w, capacity);
+                fn.addEdge(edgeStart);
+                ???
+                FlowEdge edgeMiddle1 = new FlowEdge(w+gamesToPlay,v-1,Double.POSITIVE_INFINITY);
+                fn.addEdge(edgeMiddle1);
+
+                w++;
+            }
+
+        }
+
+        return fn;
     }
 
     private int determineV(int x) {
@@ -159,7 +186,7 @@ public class BaseballElimination {
 
         }
 
-        return v + 2 + length - 1;
+        return v + 2 + (length - 1);
     }
 
     public static void main(String[] args) {
