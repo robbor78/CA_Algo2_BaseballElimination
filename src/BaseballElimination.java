@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import edu.princeton.cs.algs4.FlowNetwork;
+import edu.princeton.cs.algs4.FordFulkerson;
 import edu.princeton.cs.algs4.StdOut;
 
 public class BaseballElimination {
@@ -16,35 +18,7 @@ public class BaseballElimination {
 
     // create a baseball division from given filename in format specified below
     public BaseballElimination(String filename) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-            String line = br.readLine();
-            int numTeams = Integer.parseInt(line);
-            names = new HashMap<String, Integer>();
-            wins = new int[numTeams];
-            losses = new int[numTeams];
-            remaining = new int[numTeams];
-            games = new int[numTeams][];
-
-            for (int i = 0; i < numTeams; i++) {
-                line = br.readLine();
-                names.put(line.split("\\s+")[0], i);
-                int[] values = Arrays.stream(line.split("\\s+")).skip(1)
-                        .mapToInt(Integer::parseInt).toArray();
-
-                wins[i] = values[0];
-                losses[i] = values[1];
-                remaining[i] = values[2];
-
-                games[i] = new int[numTeams];
-                for (int k = 0; k < numTeams; k++) {
-                    games[i][k] = values[3 + k];
-                }
-
-            }
-
-        } catch (IOException e) {
-            
-        }
+        parseFile(filename);
     }
 
     // number of teams
@@ -79,6 +53,7 @@ public class BaseballElimination {
 
     // is given team eliminated?
     public boolean isEliminated(String team) {
+        runFordFulkerson(team);
         return false;
     }
 
@@ -88,7 +63,58 @@ public class BaseballElimination {
     }
     
     private int ix(String team) {
+        if (!names.containsKey(team)) {
+            throw new java.lang.IllegalArgumentException();
+        }
         return names.get(team);
+    }
+    
+    private void parseFile(String filename) {
+        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+            String line = br.readLine();
+            int numTeams = Integer.parseInt(line);
+            names = new HashMap<String, Integer>();
+            wins = new int[numTeams];
+            losses = new int[numTeams];
+            remaining = new int[numTeams];
+            games = new int[numTeams][];
+
+            for (int i = 0; i < numTeams; i++) {
+                line = br.readLine();
+                names.put(line.split("\\s+")[0], i);
+                int[] values = Arrays.stream(line.split("\\s+")).skip(1)
+                        .mapToInt(Integer::parseInt).toArray();
+
+                wins[i] = values[0];
+                losses[i] = values[1];
+                remaining[i] = values[2];
+
+                games[i] = new int[numTeams];
+                for (int k = 0; k < numTeams; k++) {
+                    games[i][k] = values[3 + k];
+                }
+
+            }
+
+        } catch (IOException e) {
+            
+        }
+    }
+    
+    private void runFordFulkerson(String team) {
+        
+        int x = ix(team);
+        
+        int v = determineV(x);
+        
+        FlowNetwork fn = new FlowNetwork(v);
+        FordFulkerson ff = new FordFulkerson(fn,0,v-1);
+        
+    }
+
+    private int determineV(int x) {
+        // TODO Auto-generated method stub
+        return 0;
     }
 
     public static void main(String[] args) {
