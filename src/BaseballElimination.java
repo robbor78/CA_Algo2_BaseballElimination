@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.stream.IntStream;
 
 import edu.princeton.cs.algs4.FlowNetwork;
 import edu.princeton.cs.algs4.FordFulkerson;
@@ -53,22 +54,25 @@ public class BaseballElimination {
 
     // is given team eliminated?
     public boolean isEliminated(String team) {
-        runFordFulkerson(team);
-        return false;
+        boolean isEliminated = isTrivialEliminated(team);
+        if (!isEliminated) {
+            runFordFulkerson(team);
+        }
+        return isEliminated;
     }
 
     // subset R of teams that eliminates given team; null if not eliminated
     public Iterable<String> certificateOfElimination(String team) {
         return null;
     }
-    
+
     private int ix(String team) {
         if (!names.containsKey(team)) {
             throw new java.lang.IllegalArgumentException();
         }
         return names.get(team);
     }
-    
+
     private void parseFile(String filename) {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
             String line = br.readLine();
@@ -97,24 +101,52 @@ public class BaseballElimination {
             }
 
         } catch (IOException e) {
-            
+
         }
     }
-    
-    private void runFordFulkerson(String team) {
-        
+
+    private boolean isTrivialEliminated(String team) {
         int x = ix(team);
-        
+
+        int maxWins = wins[x] + remaining[x];
+
+        return IntStream.range(0, wins.length)
+                .filter(i -> i != x && wins[i] > maxWins).count() > 0;
+    }
+
+    private void runFordFulkerson(String team) {
+
+        int x = ix(team);
+
         int v = determineV(x);
-        
+
         FlowNetwork fn = new FlowNetwork(v);
-        FordFulkerson ff = new FordFulkerson(fn,0,v-1);
+        FordFulkerson ff = new FordFulkerson(fn, 0, v - 1);
         
+        ff.
+
     }
 
     private int determineV(int x) {
-        // TODO Auto-generated method stub
-        return 0;
+
+        int v = 0;
+        int length = games.length;
+        for (int i = 0; i < length; i++) {
+            if (i == x) {
+                continue;
+            }
+
+            for (int k = i; k < length; k++) {
+                if (k == x) {
+                    continue;
+                }
+
+                v += games[i][k];
+            }
+
+        }
+
+        return v;
     }
 
     public static void main(String[] args) {
