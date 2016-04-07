@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.stream.IntStream;
 
+import edu.princeton.cs.algs4.FlowEdge;
 import edu.princeton.cs.algs4.FlowNetwork;
 import edu.princeton.cs.algs4.FordFulkerson;
 import edu.princeton.cs.algs4.StdOut;
@@ -56,7 +57,7 @@ public class BaseballElimination {
     public boolean isEliminated(String team) {
         boolean isEliminated = isTrivialEliminated(team);
         if (!isEliminated) {
-            runFordFulkerson(team);
+            isEliminated = runFordFulkerson(team);
         }
         return isEliminated;
     }
@@ -114,17 +115,29 @@ public class BaseballElimination {
                 .filter(i -> i != x && wins[i] > maxWins).count() > 0;
     }
 
-    private void runFordFulkerson(String team) {
+    private boolean runFordFulkerson(String team) {
 
         int x = ix(team);
 
         int v = determineV(x);
 
-        FlowNetwork fn = new FlowNetwork(v);
+        FlowNetwork fn = buildFlowNetwork(v);
         FordFulkerson ff = new FordFulkerson(fn, 0, v - 1);
-        
-        ff.
 
+        Iterable<FlowEdge> iter = fn.adj(0);
+
+        for (FlowEdge fe : iter) {
+            if (fe.capacity() != fe.flow()) {
+                return true;
+            }
+        }
+        return false;
+
+    }
+
+    private FlowNetwork buildFlowNetwork(int v) {
+        // TODO Auto-generated method stub
+        return null;
     }
 
     private int determineV(int x) {
@@ -146,7 +159,7 @@ public class BaseballElimination {
 
         }
 
-        return v;
+        return v + 2 + length - 1;
     }
 
     public static void main(String[] args) {
