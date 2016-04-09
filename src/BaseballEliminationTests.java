@@ -1,5 +1,6 @@
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
 
@@ -79,13 +80,14 @@ public class BaseballEliminationTests {
         int wins = 0;
         int g = 0;
         int r = 0;
-        for (String a : actualCert) {
+        String[] cert = toArray(actualCert);
+        int length = cert.length;
+        for (int i = 0; i < length; i++) {
+            String a = cert[i];
             r++;
             wins += be.wins(a);
-            for (String b : actualCert) {
-                if (a.compareTo(b) == 0) {
-                    continue;
-                }
+            for (int j = i + 1; j < length; j++) {
+                String b = cert[j];
                 g += be.against(a, b);
             }
         }
@@ -96,24 +98,38 @@ public class BaseballEliminationTests {
 
     private void TestEqual(Iterable<String> expected, Iterable<String> actual) {
 
+        TestEqualOneWay(expected, actual);
+        TestEqualOneWay(actual, expected);
+
+    }
+
+    private String[] toArray(final Iterable<String> elements) {
+        ArrayList<String> al = new ArrayList<String>();
+        for (String element : elements) {
+            al.add(element);
+        }
+
+        return al.toArray(new String[al.size()]);
+        // String t[] = new String[length];
+        // int i = 0;
+        // for (final String element : elements) {
+        // t[i++] = element;
+        // }
+        // return t;
+    }
+
+    private void TestEqualOneWay(Iterable<String> expected,
+            Iterable<String> actual) {
         for (String e : expected) {
+            boolean isFound = false;
             for (String a : actual) {
-                if (e.compareTo(a) == 0) {
+                isFound = e.compareTo(a) == 0;
+                if (isFound) {
                     break;
                 }
             }
-            assertTrue(false);
+            assertTrue(isFound);
         }
-
-        for (String a : expected) {
-            for (String e : actual) {
-                if (e.compareTo(a) == 0) {
-                    break;
-                }
-            }
-            assertTrue(false);
-        }
-
     }
 
 }
