@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Vector;
@@ -24,7 +25,7 @@ public class BaseballElimination {
     private int[] remaining;
     private int[][] games;
     private int[] isTeamEliminated;
-    private Vector<String>[] certificates;
+    private ArrayList<Vector<String>> certificates;
 
     // create a baseball division from given filename in format specified below
     public BaseballElimination(String filename) {
@@ -81,7 +82,7 @@ public class BaseballElimination {
         isEliminated(team);
         int x = ix(team);
         if (isTeamEliminated[x] == IS_ELIMINATED) {
-            iter = certificates[x];
+            iter = certificates.get(x);
         }
         return iter;
     }
@@ -112,7 +113,7 @@ public class BaseballElimination {
             remaining = new int[numTeams];
             games = new int[numTeams][];
             isTeamEliminated = new int[numTeams];
-            certificates = (Vector<String>[]) new Object[numTeams];
+            certificates = new ArrayList<Vector<String>>();
 
             for (int i = 0; i < numTeams; i++) {
                 line = br.readLine();
@@ -132,7 +133,6 @@ public class BaseballElimination {
                 }
 
                 isTeamEliminated[i] = UNKNOWN;
-                certificates[i] = null;
 
             }
 
@@ -200,14 +200,15 @@ public class BaseballElimination {
              * with the inCut() method.
              */
 
-            certificates[x] = new Vector<String>();
+            Vector<String> certificate = new Vector<String>();
             int numTeams = games.length;
             for (int i = 0; i < numTeams; i++) {
 
                 if (i != x && ff.inCut(i)) {
-                    certificates[x].addElement(xi(i));
+                    certificate.addElement(xi(i));
                 }
             }
+            certificates.add(x, certificate);
         }
 
         return isEliminated;
@@ -219,14 +220,17 @@ public class BaseballElimination {
         FlowNetwork fn = new FlowNetwork(numVertices);
 
         int numTeams = games.length;
-        int w = 1 + numTeams; // index of the first "middle" vertex
+        int w = 1 + (numVertices - numTeams + 1 - 2); // index of the first
+                                                      // "middle" vertex
         for (int i = 0; i < numTeams; i++) {
             if (i == x) {
                 continue;
             }
 
+            boolean isHaveGame = false;
+
             for (int j = i; j < numTeams; j++) {
-                if (j == x) {
+                if (i == j) {
                     continue;
                 }
 
@@ -238,22 +242,26 @@ public class BaseballElimination {
                  * between the team vertices i and j.
                  */
                 int capacity = games[i][j];
-                FlowEdge edgeStart = new FlowEdge(0, w, capacity);
-                fn.addEdge(edgeStart);
+                if (capacity > 0) {
+                    isHaveGame = true;
+                    FlowEdge edgeStart = new FlowEdge(0, w, capacity);
+                    fn.addEdge(edgeStart);
 
-                /*
-                 * We connect each game vertex i-j with the two opposing team
-                 * vertices to ensure that one of the two teams earns a win. We
-                 * do not need to restrict the amount of flow on such edges.
-                 */
-                FlowEdge edge_Game_ij_Team_i = new FlowEdge(w, i + 1,
-                        Double.POSITIVE_INFINITY);
-                fn.addEdge(edge_Game_ij_Team_i);
-                FlowEdge edge_Game_ij_Team_j = new FlowEdge(w, j + 1,
-                        Double.POSITIVE_INFINITY);
-                fn.addEdge(edge_Game_ij_Team_j);
+                    /*
+                     * We connect each game vertex i-j with the two opposing
+                     * team vertices to ensure that one of the two teams earns a
+                     * win. We do not need to restrict the amount of flow on
+                     * such edges.
+                     */
+                    FlowEdge edge_Game_ij_Team_i = new FlowEdge(w, i + 1,
+                            Double.POSITIVE_INFINITY);
+                    fn.addEdge(edge_Game_ij_Team_i);
+                    FlowEdge edge_Game_ij_Team_j = new FlowEdge(w, j + 1,
+                            Double.POSITIVE_INFINITY);
+                    fn.addEdge(edge_Game_ij_Team_j);
 
-                w++;
+                    w++;
+                }
             }
 
             /*
@@ -266,11 +274,13 @@ public class BaseballElimination {
              * capacity w[x] + r[x] - w[i].
              */
 
-            int maxAllowedWins = wins[x] + remaining[x] - wins[i];
-            if (maxAllowedWins > 0) {
-                FlowEdge edge_Team_i_sink = new FlowEdge(i + 1, numVertices - 1,
-                        maxAllowedWins);
-                fn.addEdge(edge_Team_i_sink);
+            if (isHaveGame) {
+                int maxAllowedWins = wins[x] + remaining[x] - wins[i];
+                if (maxAllowedWins > 0) {
+                    FlowEdge edge_Team_i_sink = new FlowEdge(i + 1,
+                            numVertices - 1, maxAllowedWins);
+                    fn.addEdge(edge_Team_i_sink);
+                }
             }
 
         }
