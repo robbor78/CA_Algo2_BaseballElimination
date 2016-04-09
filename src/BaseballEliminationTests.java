@@ -32,7 +32,8 @@ public class BaseballEliminationTests {
     @Test
     public void test() {
         String[] filenames = {
-                "/run/media/bert/280AC22E0AF59495/coursera/algorithms/2/assignments/3BaseballElimination/baseball/teams4.txt" };
+                "/run/media/bert/280AC22E0AF59495/coursera/algorithms/2/assignments/3BaseballElimination/baseball/teams4.txt",
+                "/run/media/bert/280AC22E0AF59495/coursera/algorithms/2/assignments/3BaseballElimination/baseball/teams5.txt" };
         int length = filenames.length;
 
         HashMap<String, Boolean> isEliminated[] = (HashMap<String, Boolean>[]) new HashMap[length];
@@ -51,6 +52,21 @@ public class BaseballEliminationTests {
         tmp.addElement("Atlanta");
         tmp.addElement("New_York");
         certificates[0].put("Philadelphia", tmp);
+
+        isEliminated[1] = new HashMap<>();
+        isEliminated[1].put("New_York", false);
+        isEliminated[1].put("Baltimore", false);
+        isEliminated[1].put("Boston", false);
+        isEliminated[1].put("Toronto", false);
+        isEliminated[1].put("Detroit", true);
+
+        certificates[1] = new HashMap<>();
+        tmp = new Vector<>();
+        tmp.addElement("New_York");
+        tmp.addElement("Baltimore");
+        tmp.addElement("Boston");
+        tmp.addElement("Toronto");
+        certificates[1].put("Detroit", tmp);
 
         for (int i = 0; i < length; i++) {
 
