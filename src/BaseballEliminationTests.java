@@ -59,23 +59,46 @@ public class BaseballEliminationTests {
             for (String team : be.teams()) {
                 boolean actual = be.isEliminated(team);
                 assertEquals(isEliminated[i].get(team), actual);
-                
+
                 if (actual) {
                     Iterable<String> expectedCert = certificates[i].get(team);
-                    Iterable<String> actualCert = be.certificateOfElimination(team);
-                    TestEqual(expectedCert,actualCert);
+                    Iterable<String> actualCert = be
+                            .certificateOfElimination(team);
+
+                    validateCertificate(be, team, actualCert);
+
+                    TestEqual(expectedCert, actualCert);
                 }
             }
 
         }
     }
 
-    private void TestEqual(Iterable<String> expected,
-            Iterable<String> actual) {
-        
+    private void validateCertificate(BaseballElimination be, String team,
+            Iterable<String> actualCert) {
+        int wins = 0;
+        int g = 0;
+        int r = 0;
+        for (String a : actualCert) {
+            r++;
+            wins += be.wins(a);
+            for (String b : actualCert) {
+                if (a.compareTo(b) == 0) {
+                    continue;
+                }
+                g += be.against(a, b);
+            }
+        }
+        double ar = ((double) (wins + g)) / (double) (r);
+        int max = be.wins(team) + be.remaining(team);
+        assertTrue(ar > (double) max);
+    }
+
+    private void TestEqual(Iterable<String> expected, Iterable<String> actual) {
+
         for (String e : expected) {
             for (String a : actual) {
-                if (e.compareTo(a)==0) {
+                if (e.compareTo(a) == 0) {
                     break;
                 }
             }
@@ -84,14 +107,13 @@ public class BaseballEliminationTests {
 
         for (String a : expected) {
             for (String e : actual) {
-                if (e.compareTo(a)==0) {
+                if (e.compareTo(a) == 0) {
                     break;
                 }
             }
             assertTrue(false);
         }
 
-        
     }
 
 }
