@@ -25,7 +25,8 @@ public class BaseballElimination {
     private int[] remaining;
     private int[][] games;
     private int[] isTeamEliminated;
-    private ArrayList<Vector<String>> certificates;
+    // private ArrayList<Vector<String>> certificates;
+    private Vector<String>[] certificates;
 
     // create a baseball division from given filename in format specified below
     public BaseballElimination(String filename) {
@@ -82,7 +83,8 @@ public class BaseballElimination {
         isEliminated(team);
         int x = ix(team);
         if (isTeamEliminated[x] == IS_ELIMINATED) {
-            iter = certificates.get(x);
+            // iter = certificates.get(x);
+            iter = certificates[x];
         }
         return iter;
     }
@@ -113,7 +115,8 @@ public class BaseballElimination {
             remaining = new int[numTeams];
             games = new int[numTeams][];
             isTeamEliminated = new int[numTeams];
-            certificates = new ArrayList<Vector<String>>(numTeams);
+            // certificates = new ArrayList<Vector<String>>(numTeams);
+            certificates = (Vector<String>[]) new Vector[numTeams];
 
             for (int i = 0; i < numTeams; i++) {
                 line = br.readLine();
@@ -133,6 +136,8 @@ public class BaseballElimination {
                 }
 
                 isTeamEliminated[i] = UNKNOWN;
+                // certificates.add(i, null);
+                certificates[i] = null;
 
             }
 
@@ -153,8 +158,20 @@ public class BaseballElimination {
 
         int maxPossibleWins = wins[x] + remaining[x];
 
-        return IntStream.range(0, wins.length)
-                .filter(i -> i != x && maxPossibleWins < wins[i]).count() > 0;
+        return IntStream.range(0, wins.length).filter(i -> {
+            if (i != x && maxPossibleWins < wins[i]) {
+                // Vector<String> c = certificates.get(x);
+                Vector<String> c = certificates[x];
+                if (c == null) {
+                    c = new Vector<String>();
+                    // certificates.add(x, c);
+                    certificates[x] = c;
+                }
+                c.add(xi(i));
+                return true;
+            }
+            return false;
+        }).count() > 0;
     }
 
     private boolean runFordFulkerson(String team) {
@@ -208,7 +225,8 @@ public class BaseballElimination {
                     certificate.addElement(xi(i));
                 }
             }
-            certificates.add(x, certificate);
+            // certificates.add(x, certificate);
+            certificates[x] = certificate;
         }
 
         return isEliminated;
@@ -227,7 +245,7 @@ public class BaseballElimination {
                 continue;
             }
 
-            boolean isHaveGame = false;
+            // boolean isHaveGame = false;
 
             for (int j = i + 1; j < numTeams; j++) {
                 if (j == x) {
@@ -242,7 +260,7 @@ public class BaseballElimination {
                  */
                 int capacity = games[i][j];
                 if (capacity > 0) {
-                    isHaveGame = true;
+                    // isHaveGame = true;
                     FlowEdge edgeStart = new FlowEdge(0, w, capacity);
                     fn.addEdge(edgeStart);
 
@@ -257,15 +275,15 @@ public class BaseballElimination {
                     fn.addEdge(edge_Game_ij_Team_i);
                     FlowEdge edge_Game_ij_Team_j = new FlowEdge(w, j + 1,
                             Double.POSITIVE_INFINITY);
-                    fn.addEdge(edge_Game_ij_Team_j);                    
+                    fn.addEdge(edge_Game_ij_Team_j);
                     w++;
-                    
-                    int maxAllowedWins = wins[x] + remaining[x] - wins[j];
-                    if (maxAllowedWins > 0) {
-                        FlowEdge edge_Team_i_sink = new FlowEdge(j + 1,
-                                numVertices - 1, maxAllowedWins);
-                        fn.addEdge(edge_Team_i_sink);
-                    }
+
+                    // int maxAllowedWins = wins[x] + remaining[x] - wins[j];
+                    // if (maxAllowedWins > 0) {
+                    // FlowEdge edge_Team_i_sink = new FlowEdge(j + 1,
+                    // numVertices - 1, maxAllowedWins);
+                    // fn.addEdge(edge_Team_i_sink);
+                    // }
 
                 }
             }
@@ -279,18 +297,19 @@ public class BaseballElimination {
              * by including an edge from team vertex i to the sink vertex with
              * capacity w[x] + r[x] - w[i].
              */
-            if (isHaveGame) {
-                int maxAllowedWins = wins[x] + remaining[x] - wins[i];
-                if (maxAllowedWins > 0) {
-                    FlowEdge edge_Team_i_sink = new FlowEdge(i + 1,
-                            numVertices - 1, maxAllowedWins);
-                    fn.addEdge(edge_Team_i_sink);
-                }
+            // if (isHaveGame) {
+            int maxAllowedWins = wins[x] + remaining[x] - wins[i];
+            if (maxAllowedWins > 0) {
+                FlowEdge edge_Team_i_sink = new FlowEdge(i + 1, numVertices - 1,
+                        maxAllowedWins);
+                fn.addEdge(edge_Team_i_sink);
             }
+            // }
 
         }
 
         return fn;
+
     }
 
     private int determineNumberVertices(int x) {
