@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Vector;
 import java.util.stream.IntStream;
 
 import edu.princeton.cs.algs4.FlowEdge;
@@ -12,11 +13,18 @@ import edu.princeton.cs.algs4.StdOut;
 
 public class BaseballElimination {
 
+    private final int UNKNOWN = 0;
+    private final int IS_ELIMINATED = 1;
+    private final int IS_NOT_ELIMINATED = 2;
+
     private HashMap<String, Integer> names;
+    private HashMap<Integer, String> invNames;
     private int[] wins;
     private int[] losses;
     private int[] remaining;
     private int[][] games;
+    private int[] isTeamEliminated;
+    private Vector<String>[] certificates;
 
     // create a baseball division from given filename in format specified below
     public BaseballElimination(String filename) {
@@ -55,16 +63,27 @@ public class BaseballElimination {
 
     // is given team eliminated?
     public boolean isEliminated(String team) {
-        boolean isEliminated = isTrivialEliminated(team);
-        if (!isEliminated) {
-            isEliminated = runFordFulkerson(team);
+        int x = ix(team);
+        if (isTeamEliminated[x] == UNKNOWN) {
+            isTeamEliminated[x] = isTrivialEliminated(team) ? IS_ELIMINATED
+                    : UNKNOWN;
+            if (isTeamEliminated[x] == UNKNOWN) {
+                isTeamEliminated[x] = runFordFulkerson(team) ? IS_ELIMINATED
+                        : IS_NOT_ELIMINATED;
+            }
         }
-        return isEliminated;
+        return isTeamEliminated[x] == IS_ELIMINATED;
     }
 
     // subset R of teams that eliminates given team; null if not eliminated
     public Iterable<String> certificateOfElimination(String team) {
-        return null;
+        Iterable<String> iter = null;
+        isEliminated(team);
+        int x = ix(team);
+        if (isTeamEliminated[x] == IS_ELIMINATED) {
+            iter = certificates[x];
+        }
+        return iter;
     }
 
     private int ix(String team) {
@@ -74,19 +93,32 @@ public class BaseballElimination {
         return names.get(team);
     }
 
+    private String xi(int i) {
+        if (!invNames.containsKey(i)) {
+            throw new java.lang.IllegalArgumentException();
+        }
+        return invNames.get(i);
+    }
+
+    @SuppressWarnings("unchecked")
     private void parseFile(String filename) {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
             String line = br.readLine();
             int numTeams = Integer.parseInt(line);
             names = new HashMap<String, Integer>();
+            invNames = new HashMap<Integer, String>();
             wins = new int[numTeams];
             losses = new int[numTeams];
             remaining = new int[numTeams];
             games = new int[numTeams][];
+            isTeamEliminated = new int[numTeams];
+            certificates = (Vector<String>[]) new Object[numTeams];
 
             for (int i = 0; i < numTeams; i++) {
                 line = br.readLine();
-                names.put(line.split("\\s+")[0], i);
+                String name = line.split("\\s+")[0];
+                names.put(name, i);
+                invNames.put(i, name);
                 int[] values = Arrays.stream(line.split("\\s+")).skip(1)
                         .mapToInt(Integer::parseInt).toArray();
 
@@ -99,6 +131,9 @@ public class BaseballElimination {
                     games[i][k] = values[3 + k];
                 }
 
+                isTeamEliminated[i] = UNKNOWN;
+                certificates[i] = null;
+
             }
 
         } catch (IOException e) {
@@ -107,59 +142,135 @@ public class BaseballElimination {
     }
 
     private boolean isTrivialEliminated(String team) {
+        /*
+         * If the maximum number of games team x can win is less than the number
+         * of wins of some other team i, then team x is trivially eliminated.
+         * That is, if w[x] + r[x] < w[i], then team x is mathematically
+         * eliminated.
+         */
+
         int x = ix(team);
 
-        int maxWins = wins[x] + remaining[x];
+        int maxPossibleWins = wins[x] + remaining[x];
 
         return IntStream.range(0, wins.length)
-                .filter(i -> i != x && wins[i] > maxWins).count() > 0;
+                .filter(i -> i != x && maxPossibleWins < wins[i]).count() > 0;
     }
 
     private boolean runFordFulkerson(String team) {
 
         int x = ix(team);
-
-        int v = determineV(x);
+        int v = determineNumberVertices(x);
 
         FlowNetwork fn = buildFlowNetwork(x, v);
         FordFulkerson ff = new FordFulkerson(fn, 0, v - 1);
 
         Iterable<FlowEdge> iter = fn.adj(0);
 
+        /*
+         * If all edges in the maxflow that are pointing from s are full, then
+         * this corresponds to assigning winners to all of the remaining games
+         * in such a way that no team wins more games than x. If some edges
+         * pointing from s are not full, then there is no scenario in which team
+         * x can win the division.
+         */
+        boolean isEliminated = false;
         for (FlowEdge fe : iter) {
             if (fe.capacity() != fe.flow()) {
-                return true;
+                isEliminated = true;
+                break;
             }
         }
-        return false;
+
+        if (isEliminated) {
+            /*
+             * In fact, when a team is mathematically eliminated there always
+             * exists such a convincing certificate of elimination, where R is
+             * some subset of the other teams in the division. Moreover, you can
+             * always find such a subset R by choosing the team vertices on the
+             * source side of a min s-t cut in the baseball elimination network.
+             * Note that although we solved a maxflow/mincut problem to find the
+             * subset R, once we have it, the argument for a team's elimination
+             * involves only grade-school algebra.
+             */
+
+            /*
+             * You can access the value of the flow with the value() method; you
+             * can identify which vertices are on the source side of the mincut
+             * with the inCut() method.
+             */
+
+            certificates[x] = new Vector<String>();
+            int numTeams = games.length;
+            for (int i = 0; i < numTeams; i++) {
+
+                if (i != x && ff.inCut(i)) {
+                    certificates[x].addElement(xi(i));
+                }
+            }
+        }
+
+        return isEliminated;
 
     }
 
-    private FlowNetwork buildFlowNetwork(int x, int v) {
-        FlowNetwork fn = new FlowNetwork(v);
+    private FlowNetwork buildFlowNetwork(int x, int numVertices) {
 
-        int length = games.length;
-        int gamesToPlay = v - 2 - (length - 1);
-        int w = 1;
-        for (int i = 0; i < length; i++) {
+        FlowNetwork fn = new FlowNetwork(numVertices);
+
+        int numTeams = games.length;
+        int w = 1 + numTeams; // index of the first "middle" vertex
+        for (int i = 0; i < numTeams; i++) {
             if (i == x) {
                 continue;
             }
 
-            for (int k = i; k < length; k++) {
-                if (k == x) {
+            for (int j = i; j < numTeams; j++) {
+                if (j == x) {
                     continue;
                 }
 
-                int capacity = games[i][k];
-                
+                /*
+                 * We connect an artificial source vertex s to each game vertex
+                 * i-j and set its capacity to g[i][j]. If a flow uses all
+                 * g[i][j] units of capacity on this edge, then we interpret
+                 * this as playing all of these games, with the wins distributed
+                 * between the team vertices i and j.
+                 */
+                int capacity = games[i][j];
                 FlowEdge edgeStart = new FlowEdge(0, w, capacity);
                 fn.addEdge(edgeStart);
-                ???
-                FlowEdge edgeMiddle1 = new FlowEdge(w+gamesToPlay,v-1,Double.POSITIVE_INFINITY);
-                fn.addEdge(edgeMiddle1);
+
+                /*
+                 * We connect each game vertex i-j with the two opposing team
+                 * vertices to ensure that one of the two teams earns a win. We
+                 * do not need to restrict the amount of flow on such edges.
+                 */
+                FlowEdge edge_Game_ij_Team_i = new FlowEdge(w, i + 1,
+                        Double.POSITIVE_INFINITY);
+                fn.addEdge(edge_Game_ij_Team_i);
+                FlowEdge edge_Game_ij_Team_j = new FlowEdge(w, j + 1,
+                        Double.POSITIVE_INFINITY);
+                fn.addEdge(edge_Game_ij_Team_j);
 
                 w++;
+            }
+
+            /*
+             * Finally, we connect each team vertex to an artificial sink vertex
+             * t. We want to know if there is some way of completing all the
+             * games so that team x ends up winning at least as many games as
+             * team i. Since team x can win as many as w[x] + r[x] games, we
+             * prevent team i from winning more than that many games in total,
+             * by including an edge from team vertex i to the sink vertex with
+             * capacity w[x] + r[x] - w[i].
+             */
+
+            int maxAllowedWins = wins[x] + remaining[x] - wins[i];
+            if (maxAllowedWins > 0) {
+                FlowEdge edge_Team_i_sink = new FlowEdge(i + 1, numVertices - 1,
+                        maxAllowedWins);
+                fn.addEdge(edge_Team_i_sink);
             }
 
         }
@@ -167,16 +278,16 @@ public class BaseballElimination {
         return fn;
     }
 
-    private int determineV(int x) {
+    private int determineNumberVertices(int x) {
 
         int v = 0;
-        int length = games.length;
-        for (int i = 0; i < length; i++) {
+        int numTeams = games.length;
+        for (int i = 0; i < numTeams; i++) {
             if (i == x) {
                 continue;
             }
 
-            for (int k = i; k < length; k++) {
+            for (int k = i; k < numTeams; k++) {
                 if (k == x) {
                     continue;
                 }
@@ -186,7 +297,8 @@ public class BaseballElimination {
 
         }
 
-        return v + 2 + (length - 1);
+        return v + 2 + (numTeams - 1); // +2 for source and sink, +number of
+                                       // teams, -1 for the team under question
     }
 
     public static void main(String[] args) {
