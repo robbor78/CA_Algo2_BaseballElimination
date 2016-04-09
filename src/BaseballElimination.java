@@ -182,8 +182,6 @@ public class BaseballElimination {
         FlowNetwork fn = buildFlowNetwork(x, v);
         FordFulkerson ff = new FordFulkerson(fn, 0, v - 1);
 
-        Iterable<FlowEdge> iter = fn.adj(0);
-
         /*
          * If all edges in the maxflow that are pointing from s are full, then
          * this corresponds to assigning winners to all of the remaining games
@@ -192,6 +190,7 @@ public class BaseballElimination {
          * x can win the division.
          */
         boolean isEliminated = false;
+        Iterable<FlowEdge> iter = fn.adj(0);
         for (FlowEdge fe : iter) {
             if (fe.capacity() != fe.flow()) {
                 isEliminated = true;
@@ -221,7 +220,7 @@ public class BaseballElimination {
             int numTeams = games.length;
             for (int i = 0; i < numTeams; i++) {
 
-                if (i != x && ff.inCut(i)) {
+                if (i != x && ff.inCut(i+1)) {
                     certificate.addElement(xi(i));
                 }
             }
@@ -238,7 +237,7 @@ public class BaseballElimination {
         FlowNetwork fn = new FlowNetwork(numVertices);
 
         int numTeams = games.length;
-        int w = 1 + (numVertices - numTeams + 1 - 2); // index of the first
+        int w = 1+numTeams;// 1 + (numVertices - numTeams + 1 - 2); // index of the first
                                                       // "middle" vertex
         for (int i = 0; i < numTeams; i++) {
             if (i == x) {
@@ -259,33 +258,32 @@ public class BaseballElimination {
                  * between the team vertices i and j.
                  */
                 int capacity = games[i][j];
-                if (capacity > 0) {
-                    // isHaveGame = true;
-                    FlowEdge edgeStart = new FlowEdge(0, w, capacity);
-                    fn.addEdge(edgeStart);
+                // if (capacity > 0) {
+                // isHaveGame = true;
+                FlowEdge edgeStart = new FlowEdge(0, w, capacity);
+                fn.addEdge(edgeStart);
 
-                    /*
-                     * We connect each game vertex i-j with the two opposing
-                     * team vertices to ensure that one of the two teams earns a
-                     * win. We do not need to restrict the amount of flow on
-                     * such edges.
-                     */
-                    FlowEdge edge_Game_ij_Team_i = new FlowEdge(w, i + 1,
-                            Double.POSITIVE_INFINITY);
-                    fn.addEdge(edge_Game_ij_Team_i);
-                    FlowEdge edge_Game_ij_Team_j = new FlowEdge(w, j + 1,
-                            Double.POSITIVE_INFINITY);
-                    fn.addEdge(edge_Game_ij_Team_j);
-                    w++;
+                /*
+                 * We connect each game vertex i-j with the two opposing team
+                 * vertices to ensure that one of the two teams earns a win. We
+                 * do not need to restrict the amount of flow on such edges.
+                 */
+                FlowEdge edge_Game_ij_Team_i = new FlowEdge(w, i + 1,
+                        Double.POSITIVE_INFINITY);
+                fn.addEdge(edge_Game_ij_Team_i);
+                FlowEdge edge_Game_ij_Team_j = new FlowEdge(w, j + 1,
+                        Double.POSITIVE_INFINITY);
+                fn.addEdge(edge_Game_ij_Team_j);
+                w++;
 
-                    // int maxAllowedWins = wins[x] + remaining[x] - wins[j];
-                    // if (maxAllowedWins > 0) {
-                    // FlowEdge edge_Team_i_sink = new FlowEdge(j + 1,
-                    // numVertices - 1, maxAllowedWins);
-                    // fn.addEdge(edge_Team_i_sink);
-                    // }
+                // int maxAllowedWins = wins[x] + remaining[x] - wins[j];
+                // if (maxAllowedWins > 0) {
+                // FlowEdge edge_Team_i_sink = new FlowEdge(j + 1,
+                // numVertices - 1, maxAllowedWins);
+                // fn.addEdge(edge_Team_i_sink);
+                // }
 
-                }
+                // }
             }
 
             /*
@@ -299,7 +297,7 @@ public class BaseballElimination {
              */
             // if (isHaveGame) {
             int maxAllowedWins = wins[x] + remaining[x] - wins[i];
-            if (maxAllowedWins > 0) {
+            if (maxAllowedWins >= 0) {
                 FlowEdge edge_Team_i_sink = new FlowEdge(i + 1, numVertices - 1,
                         maxAllowedWins);
                 fn.addEdge(edge_Team_i_sink);
@@ -316,23 +314,24 @@ public class BaseballElimination {
 
         int v = 0;
         int numTeams = games.length;
-        for (int i = 0; i < numTeams; i++) {
-            if (i == x) {
-                continue;
-            }
-
-            for (int k = i; k < numTeams; k++) {
-                if (k == x) {
-                    continue;
-                }
-
-                v += games[i][k];
-            }
-
-        }
-
-        return v + 2 + (numTeams - 1); // +2 for source and sink, +number of
-                                       // teams, -1 for the team under question
+        return 2 + numTeams + numTeams * numTeams;
+        // for (int i = 0; i < numTeams; i++) {
+        // if (i == x) {
+        // continue;
+        // }
+        //
+        // for (int k = i; k < numTeams; k++) {
+        // if (k == x) {
+        // continue;
+        // }
+        //
+        // v += games[i][k];
+        // }
+        //
+        // }
+        //
+        // return v + 2 + (numTeams - 1); // +2 for source and sink, +number of
+        // // teams, -1 for the team under question
     }
 
     public static void main(String[] args) {
